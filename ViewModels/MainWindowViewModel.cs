@@ -27,12 +27,23 @@ namespace SAV.ViewModels
 
         private Configuracao CarregarConfiguracoes()
         {
-            string caminho = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "configuracoes.json");
-            if (File.Exists(caminho))
+            try
             {
-                string jsonString = File.ReadAllText(caminho);
-                return JsonSerializer.Deserialize<Configuracao>(jsonString);
+                string pastaDocumentos = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
+
+                string caminho = Path.Combine(pastaDocumentos, "SAV", "configuracoes.json");
+
+                if (File.Exists(caminho))
+                {
+                    string jsonString = File.ReadAllText(caminho);
+                    return JsonSerializer.Deserialize<Configuracao>(jsonString);
+                }
             }
+            catch (Exception erro)
+            {
+                Console.WriteLine(erro);
+            }
+
             return null;
         }
 

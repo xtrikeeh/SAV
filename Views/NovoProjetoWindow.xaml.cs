@@ -9,6 +9,8 @@ namespace SAV.Views
     {
         public string AreaInteresseResultado { get; private set; }
 
+        public string NomeArquivoResultado { get; private set; }
+
         public NovoProjetoWindow()
         {
             InitializeComponent();
@@ -123,7 +125,17 @@ namespace SAV.Views
             }
         }
 
-        private void BtnCriar_Click(object sender, RoutedEventArgs e) => this.DialogResult = true;
+        private void BtnCriar_Click(object sender, RoutedEventArgs e)
+        {
+            if (string.IsNullOrWhiteSpace(TxtNomeArquivo.Text))
+            {
+                NomeArquivoResultado = "projeto_mapa";
+            }
+
+            NomeArquivoResultado = TxtNomeArquivo.Text.Trim();
+
+            this.DialogResult = true;
+        }
         private void BtnCancelar_Click(object sender, RoutedEventArgs e) => this.DialogResult = false;
     }
 }

@@ -1,4 +1,5 @@
 ﻿using SAV.Models;
+using System;
 using System.ComponentModel;
 using System.IO;
 using System.Runtime.CompilerServices;
@@ -11,13 +12,25 @@ namespace SAV.ViewModels
     public class ConfiguracaoWindowViewModel : INotifyPropertyChanged
     {
         private Configuracao Config;
+        private readonly string _caminhoArquivoConfig;
+
         public string TemaEscolhido => Config.TemaEscuro ? "Escuro" : "Claro";
-        public string SalvamentoAutomaticoEscolhido => 
+        public string SalvamentoAutomaticoEscolhido =>
             Config.SalvamentoAutomatico == 0
             ? "Nunca" : $"{Config.SalvamentoAutomatico} minutos";
 
         public ConfiguracaoWindowViewModel()
         {
+            string pastaDocumentos = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
+            string pastaSav = Path.Combine(pastaDocumentos, "SAV");
+
+            if (!Directory.Exists(pastaSav))
+            {
+                Directory.CreateDirectory(pastaSav);
+            }
+
+            _caminhoArquivoConfig = Path.Combine(pastaSav, "configuracoes.json");
+
             var Inicializador = CarregarConfiguracoes();
 
             if (Inicializador != null)
@@ -26,11 +39,18 @@ namespace SAV.ViewModels
             }
             else
             {
+                string pastaProjetos = Path.Combine(pastaSav, "Projetos");
+
+                if (!Directory.Exists(pastaProjetos))
+                {
+                    Directory.CreateDirectory(pastaProjetos);
+                }
+
                 Config = new Configuracao
                 {
                     TemaEscuro = false,
                     SalvamentoAutomatico = 5,
-                    DiretorioPadrao = "C:\\"
+                    DiretorioPadrao = pastaProjetos
                 };
 
                 SalvarConfiguracoes();
@@ -77,20 +97,31 @@ namespace SAV.ViewModels
 
         private void SalvarConfiguracoes()
         {
-            var caminho = Path.Combine((AppDomain.CurrentDomain.BaseDirectory), "configuracoes.json");
-            var formatacao = new JsonSerializerOptions { WriteIndented = true };
-            var dados = JsonSerializer.Serialize(Config, formatacao);
-            File.WriteAllText(caminho, dados);
+            try
+            {
+                var formatacao = new JsonSerializerOptions { WriteIndented = true };
+                var dados = JsonSerializer.Serialize(Config, formatacao);
+                File.WriteAllText(_caminhoArquivoConfig, dados);
+            }
+            catch (Exception erro)
+            {
+                Console.WriteLine(erro);
+            }
         }
 
         private Configuracao CarregarConfiguracoes()
         {
-            string caminho = Path.Combine((AppDomain.CurrentDomain.BaseDirectory), "configuracoes.json");
-
-            if (File.Exists(caminho))
+            try
             {
-                string jsonString = File.ReadAllText(caminho);
-                return JsonSerializer.Deserialize<Configuracao>(jsonString);
+                if (File.Exists(_caminhoArquivoConfig))
+                {
+                    string jsonString = File.ReadAllText(_caminhoArquivoConfig);
+                    return JsonSerializer.Deserialize<Configuracao>(jsonString);
+                }
+            }
+            catch (Exception erro)
+            {
+                Console.WriteLine(erro);
             }
             return null;
         }

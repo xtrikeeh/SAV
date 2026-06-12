@@ -7,7 +7,7 @@ namespace SAV.Models
     {
         private readonly string _caminhoArquivo;
 
-        public SistemaLog(string nomeArquivo = "historico_acoes.txt")
+        public SistemaLog(string nomeArquivo = "log.txt")
         {
             string pastaDocumentos = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
 

@@ -15,6 +15,8 @@ namespace SAV
         
         private SistemaLog Log = new SistemaLog();
 
+        private System.Windows.Threading.DispatcherTimer timerAutoSalvar;
+        private string caminhoArquivoAtual = null;
         private enum ModoFerramenta { Editar, Adicionar, Deletar, Eventos }
         private ModoFerramenta modoAtual = ModoFerramenta.Editar;
 
@@ -866,6 +868,10 @@ namespace SAV
                         {
                             dadosMapaAtual = dados;
                             DesenharNoCanvas(dados);
+
+                            caminhoArquivoAtual = seletor.FileName;
+                            InicializarTimerSalvamentoAutomatico();
+
                             Log.Registrar($"Carregou um projeto existente do disco: {System.IO.Path.GetFileName(seletor.FileName)}", "Arquivo");
                         }
                     }
@@ -877,22 +883,35 @@ namespace SAV
 
                     if (janelaCidade.ShowDialog() == true)
                     {
-                        SaveFileDialog salvador = new SaveFileDialog();
-                        salvador.Filter = "Arquivos JSON (*.json)|*.json";
-                        salvador.Title = "Salvar novo mapa da cidade";
+                        string areaInteresse = janelaCidade.AreaInteresseResultado;
+                        string nomeDoArquivoUsuario = janelaCidade.NomeArquivoResultado;
 
-                        if (salvador.ShowDialog() == true)
+                        if (string.IsNullOrWhiteSpace(nomeDoArquivoUsuario)) nomeDoArquivoUsuario = "projeto_mapa";
+
+                        string pastaDocumentos = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
+                        string pastaProjetos = System.IO.Path.Combine(pastaDocumentos, "sav", "Projetos");
+
+                        if (!System.IO.Directory.Exists(pastaProjetos)) System.IO.Directory.CreateDirectory(pastaProjetos);
+
+                        foreach (char c in System.IO.Path.GetInvalidFileNameChars()) nomeDoArquivoUsuario = nomeDoArquivoUsuario.Replace(c, '_');
+                        nomeDoArquivoUsuario = nomeDoArquivoUsuario.Replace(" ", "_");
+
+                        if (!nomeDoArquivoUsuario.EndsWith(".json", StringComparison.OrdinalIgnoreCase)) nomeDoArquivoUsuario += ".json";
+
+                        string caminhoFinalDoJson = System.IO.Path.Combine(pastaProjetos, nomeDoArquivoUsuario);
+
+                        var dados = await ViewModel.CriarNovoMapa(areaInteresse, caminhoFinalDoJson);
+
+                        if (dados != null)
                         {
-                            string areaInteresse = janelaCidade.AreaInteresseResultado;
-                            var dados = await ViewModel.CriarNovoMapa(areaInteresse, salvador.FileName);
+                            dadosMapaAtual = dados;
+                            DesenharNoCanvas(dados);
 
-                            if (dados != null)
-                            {
-                                dadosMapaAtual = dados;
-                                DesenharNoCanvas(dados);
-                                Log.Registrar($"Gerou um novo mapa urbano para a região: {areaInteresse}", "Arquivo");
-                                MessageBox.Show("Mapa da cidade gerado e salvo com sucesso!");
-                            }
+                            caminhoArquivoAtual = caminhoFinalDoJson;
+                            InicializarTimerSalvamentoAutomatico();
+
+                            Log.Registrar($"Gerou um novo mapa urbano salvo como: {nomeDoArquivoUsuario}", "Arquivo");
+                            MessageBox.Show($"Mapa gerado com sucesso e salvo em:{Environment.NewLine}{caminhoFinalDoJson}");
                         }
                     }
                 }
@@ -905,6 +924,7 @@ namespace SAV
 
                     if (salvador.ShowDialog() == true)
                     {
+                        caminhoArquivoAtual = salvador.FileName;
                         await ViewModel.SalvarMapaEmDisco(salvador.FileName, dadosMapaAtual);
                         Log.Registrar($"Salvou as alterações atuais do projeto no arquivo: {System.IO.Path.GetFileName(salvador.FileName)}", "Arquivo");
                         MessageBox.Show("Projeto salvo com sucesso!");
@@ -1023,6 +1043,79 @@ namespace SAV
                     linhaVisual.StrokeThickness = viaModel.StatusSimulacao == "Normal" ? 3 : 6;
                 }
             }
+        }
+        [System.Runtime.InteropServices.DllImport("user32.dll", SetLastError = true)]
+        private static extern IntPtr FindWindow(string lpClassName, string lpWindowName);
+
+        [System.Runtime.InteropServices.DllImport("user32.dll", CharSet = System.Runtime.InteropServices.CharSet.Auto)]
+        private static extern IntPtr SendMessage(IntPtr hWnd, uint Msg, IntPtr wParam, IntPtr lParam);
+
+        private void InicializarTimerSalvamentoAutomatico()
+        {
+            var configVM = new ConfiguracaoWindowViewModel();
+            int minutos = configVM.SalvamentoAutomatico;
+
+            if (minutos <= 0) return;
+
+            timerAutoSalvar = new System.Windows.Threading.DispatcherTimer();
+
+            double segundosDoIntervalo = (minutos * 60) - 10;
+            if (segundosDoIntervalo < 5) segundosDoIntervalo = 5;
+
+            timerAutoSalvar.Interval = TimeSpan.FromSeconds(segundosDoIntervalo);
+            timerAutoSalvar.Tick += TimerAutoSalvar_Tick;
+            timerAutoSalvar.Start();
+        }
+
+        private async void TimerAutoSalvar_Tick(object sender, EventArgs e)
+        {
+            timerAutoSalvar.Stop();
+
+            if (dadosMapaAtual != null && !string.IsNullOrEmpty(caminhoArquivoAtual))
+            {
+                string tituloAlerta = "SAV - Salvamento Automático";
+                bool salvamentoCanceladoByUser = false;
+
+                Task.Run(async () =>
+                {
+                    await Task.Delay(10000);
+
+                    IntPtr mbWnd = FindWindow(null, tituloAlerta);
+                    if (mbWnd != IntPtr.Zero)
+                    {
+                        const uint WM_CLOSE = 0x0010;
+                        SendMessage(mbWnd, WM_CLOSE, IntPtr.Zero, IntPtr.Zero);
+                    }
+                });
+
+                MessageBoxResult resultado = MessageBox.Show(
+                    "O projeto será salvo automaticamente em 10 segundos.\nClique em OK para salvar agora ou Cancelar se quiser adiar.",
+                    tituloAlerta,
+                    MessageBoxButton.OKCancel,
+                    MessageBoxImage.Information
+                );
+
+                if (resultado != MessageBoxResult.OK)
+                {
+                    salvamentoCanceladoByUser = true;
+                    Log.Registrar("Salvamento automático adiado ou fechado pelo usuário.", "Sistema");
+                }
+
+                if (!salvamentoCanceladoByUser)
+                {
+                    try
+                    {
+                        await ViewModel.SalvarMapaEmDisco(caminhoArquivoAtual, dadosMapaAtual);
+                        Log.Registrar($"Salvamento automático realizado com sucesso no arquivo: {System.IO.Path.GetFileName(caminhoArquivoAtual)}", "Sistema");
+                    }
+                    catch (Exception ex)
+                    {
+                        Log.Registrar($"Falha no salvamento automático: {ex.Message}", "Erro");
+                    }
+                }
+            }
+
+            InicializarTimerSalvamentoAutomatico();
         }
     }
 }
