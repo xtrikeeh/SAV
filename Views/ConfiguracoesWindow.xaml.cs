@@ -14,7 +14,6 @@ namespace SAV.Views
             this.DataContext = new ConfiguracaoWindowViewModel();
         }
 
-        // Botão trocar tema
         private void BotaoTrocarTema_Click(object sender, RoutedEventArgs e)
         {
 
@@ -29,7 +28,6 @@ namespace SAV.Views
             }
         }
 
-        // Botão opções salvamento automático
         private void BotaoSalvamentoAutomatico_Click(object sender, EventArgs e)
         {
             Button botaoSalvamento = sender as Button;
@@ -38,7 +36,6 @@ namespace SAV.Views
             botaoSalvamento.ContextMenu.IsOpen = true;
         }
 
-        // Opção escolhida no salvamento automático
         private void OpcaoSalvamento_Click(object sender, RoutedEventArgs e)
         {
             if (sender is MenuItem item)
@@ -56,7 +53,6 @@ namespace SAV.Views
             }
         }
 
-        // Botão selecionar diretório
         private void BotaoEscolherDiretorio_Click(object sender, EventArgs e)
         {
             OpenFolderDialog selecionarPasta = new OpenFolderDialog();

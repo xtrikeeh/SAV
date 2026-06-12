@@ -9,11 +9,17 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Compile Remove="Models\Via.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
     <None Remove="Assets\sav_icon.png" />
+    <None Remove="Assets\sav_logo.png" />
   </ItemGroup>
 
   <ItemGroup>
     <Resource Include="Assets\sav_icon.png" />
+    <Resource Include="Assets\sav_logo.png" />
   </ItemGroup>
 
 </Project>
