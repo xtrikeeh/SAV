@@ -44,6 +44,8 @@ namespace SAV
         private SolidColorBrush AmareloSemantico => (SolidColorBrush)Application.Current.FindResource("amareloSemantico");
         private SolidColorBrush VerdeSemantico => (SolidColorBrush)Application.Current.FindResource("verdeSemantico");
 
+        private DadosMapa dadosMapaAtual;
+
         public MainWindow()
         {
             InitializeComponent();
@@ -165,9 +167,16 @@ namespace SAV
             {
                 foreach (var rua in ruasSelecionadas)
                 {
+                    // 1. Remove do Canvas (Visual)
                     if (CanvasMapa.Children.Contains(rua))
                     {
                         CanvasMapa.Children.Remove(rua);
+                    }
+
+                    // 2. Sincroniza com o Model (Dados)
+                    if (rua.DataContext is Via viaParaRemover && dadosMapaAtual?.elements != null)
+                    {
+                        dadosMapaAtual.elements.Remove(viaParaRemover);
                     }
                 }
 
@@ -382,31 +391,37 @@ namespace SAV
                 novaRua.Points.Add(p1);
                 novaRua.Points.Add(p2);
 
-                novaRua.MouseEnter += (s, e) =>
+                if (dadosMapaAtual != null)
                 {
-                    if (modoAtual == ModoFerramenta.Adicionar) return;
-
-                    if (s is System.Windows.Shapes.Polyline l)
+                    var primeiraVia = dadosMapaAtual.elements.FirstOrDefault(v => v.geometry != null && v.geometry.Count > 0);
+                    if (primeiraVia != null)
                     {
-                        if (viaSelecionadaAtual != l.DataContext && !ruasSelecionadas.Contains(l))
-                        {
-                            l.Stroke = modoAtual == ModoFerramenta.Deletar ? VermelhoSemantico : CorTemaTerciaria;
-                            l.StrokeThickness = 24;
-                        }
-                    }
-                };
+                        double latRef = primeiraVia.geometry[0].lat;
+                        double lonRef = primeiraVia.geometry[0].lon;
+                        double zoom = 500000;
 
-                novaRua.MouseLeave += (s, e) =>
-                {
-                    if (s is System.Windows.Shapes.Polyline l)
-                    {
-                        if (viaSelecionadaAtual != l.DataContext && !ruasSelecionadas.Contains(l))
+                        Point geoP1 = ViewModel.ConverterParaGeo(p1.X, p1.Y, latRef, lonRef, zoom);
+                        Point geoP2 = ViewModel.ConverterParaGeo(p2.X, p2.Y, latRef, lonRef, zoom);
+
+                        Via novaViaModel = new Via
                         {
-                            l.Stroke = CorTemaPrimaria;
-                            l.StrokeThickness = 20;
-                        }
+                            id = DateTime.Now.Ticks,
+                            geometry = new List<Ponto>
+                            {
+                                new Ponto { lat = geoP1.X, lon = geoP1.Y },
+                                new Ponto { lat = geoP2.X, lon = geoP2.Y }
+                            },
+                            tags = new Dictionary<string, string> { { "name", "Nova Via Criada" } }
+                        };
+
+                        novaRua.DataContext = novaViaModel;
+                        novaRua.ToolTip = novaViaModel.tags["name"];
+
+                        if (dadosMapaAtual.elements == null) dadosMapaAtual.elements = new List<Via>();
+                        dadosMapaAtual.elements.Add(novaViaModel);
                     }
-                };
+                }
+                // ------------------------------------
 
                 CanvasMapa.Children.Add(novaRua);
 
@@ -729,7 +744,10 @@ namespace SAV
             }
         }
 
-        private void BotaoCentralizar_Click(object sender, RoutedEventArgs e) => CentralizarMapa();
+        private void BotaoCentralizar_Click(object sender, RoutedEventArgs e)
+        {
+            CentralizarMapa();
+        }
 
         private void CentralizarMapa()
         {
@@ -760,8 +778,6 @@ namespace SAV
             botaoProjeto.ContextMenu.PlacementTarget = botaoProjeto;
             botaoProjeto.ContextMenu.IsOpen = true;
         }
-
-        private DadosMapa dadosMapaAtual;
 
         private async void OpcaoProjeto_Click(object sender, RoutedEventArgs e)
         {
