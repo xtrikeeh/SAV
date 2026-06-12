@@ -12,8 +12,10 @@ namespace SAV
     public partial class MainWindow : Window
     {
         public MainWindowViewModel ViewModel => (MainWindowViewModel)this.DataContext;
+        
+        private SistemaLog Log = new SistemaLog();
 
-        private enum ModoFerramenta { Editar, Adicionar, Deletar }
+        private enum ModoFerramenta { Editar, Adicionar, Deletar, Eventos }
         private ModoFerramenta modoAtual = ModoFerramenta.Editar;
 
         private List<FrameworkElement> ruasSelecionadas = new List<FrameworkElement>();
@@ -36,6 +38,8 @@ namespace SAV
 
         private int nivelZoomAtual = 0;
         private readonly double[] niveisDeEscala = { 0.05, 0.10, 0.25, 0.50, 1.0 };
+
+        public enum TipoEventoVirtual { Obra, Acidente, EventoPublico, ChuvaIntensa }
 
         private SolidColorBrush CorTemaPrimaria => (SolidColorBrush)Application.Current.FindResource("corTemaPrimaria");
         private SolidColorBrush CorTemaTerciaria => (SolidColorBrush)Application.Current.FindResource("corTemaTerciaria");
@@ -60,29 +64,51 @@ namespace SAV
 
         private void Ferramenta_Checked(object sender, RoutedEventArgs e)
         {
-            RadioButton rb = sender as RadioButton;
-            if (rb == null) return;
+            if (sender is RadioButton rb && rb.IsChecked == false) return;
+
+            if (botaoEditar == null || botaoAdicionar == null || botaoDeletar == null || botaoEventos == null) return;
+            if (ScrollPainelLateral == null || PainelDadosRua == null || PainelEventos == null || GridBotoesAcoes == null) return;
 
             LimparSelecoes();
 
-            switch (rb.Name)
+            EsconderNosDasRuas();
+            criandoRua = false;
+
+            if (botaoEditar.IsChecked == true) modoAtual = ModoFerramenta.Editar;
+            else if (botaoAdicionar.IsChecked == true) modoAtual = ModoFerramenta.Adicionar;
+            else if (botaoDeletar.IsChecked == true) modoAtual = ModoFerramenta.Deletar;
+            else if (botaoEventos.IsChecked == true) modoAtual = ModoFerramenta.Eventos;
+
+            switch (modoAtual)
             {
-                case "botaoEditar":
-                    modoAtual = ModoFerramenta.Editar;
-                    if (CanvasMapa != null) CanvasMapa.Cursor = Cursors.Arrow;
-                    EsconderNosDasRuas();
+                case ModoFerramenta.Editar:
+                    ScrollPainelLateral.Visibility = Visibility.Visible;
+                    PainelDadosRua.Visibility = Visibility.Visible;
+                    PainelEventos.Visibility = Visibility.Collapsed;
+                    GridBotoesAcoes.Visibility = Visibility.Visible;
+                    Log.Registrar("Ativou a ferramenta de Edição de vias", "Interface");
                     break;
 
-                case "botaoAdicionar":
-                    modoAtual = ModoFerramenta.Adicionar;
-                    if (CanvasMapa != null) CanvasMapa.Cursor = Cursors.Cross;
+                case ModoFerramenta.Eventos:
+                    ScrollPainelLateral.Visibility = Visibility.Visible;
+                    PainelDadosRua.Visibility = Visibility.Collapsed;
+                    PainelEventos.Visibility = Visibility.Visible;
+                    GridBotoesAcoes.Visibility = Visibility.Collapsed;
+                    Log.Registrar("Ativou a ferramenta de Simulação de Eventos Virtuais", "Interface");
+                    break;
+
+                case ModoFerramenta.Adicionar:
+                    ScrollPainelLateral.Visibility = Visibility.Collapsed;
+                    GridBotoesAcoes.Visibility = Visibility.Collapsed;
                     MostrarNosDasRuas();
+                    Log.Registrar("Ativou a ferramenta de Adição/Desenho de novas vias", "Interface");
                     break;
 
-                case "botaoDeletar":
-                    modoAtual = ModoFerramenta.Deletar;
-                    if (CanvasMapa != null) CanvasMapa.Cursor = Cursors.Hand;
-                    EsconderNosDasRuas();
+                case ModoFerramenta.Deletar:
+                    ScrollPainelLateral.Visibility = Visibility.Collapsed;
+                    GridBotoesAcoes.Visibility = Visibility.Collapsed;
+                    GerenciarBotaoExcluir();
+                    Log.Registrar("Ativou a ferramenta de Remoção de vias", "Interface");
                     break;
             }
         }
@@ -91,16 +117,40 @@ namespace SAV
         {
             if (elemento == null) return;
 
-            if (modoAtual == ModoFerramenta.Editar)
+            if (modoAtual == ModoFerramenta.Eventos)
             {
-                if (elemento.Tag?.ToString() == "Rua")
+                if (elemento.Tag?.ToString() == "Rua" && elemento.DataContext is Via via)
                 {
                     LimparSelecoes();
                     ruasSelecionadas.Add(elemento);
                     AplicarEfeitoSelecao(elemento, true);
-                    // TODO: Abrir o painel lateral de edição da via
+
+                    viaSelecionadaAtual = via;
+
+                    if (CboTipoEvento != null)
+                    {
+                        TipoEventoVirtual eventoEscolhido = (TipoEventoVirtual)CboTipoEvento.SelectedIndex;
+
+                        SimularEventoVirtualAutomatico(via, eventoEscolhido);
+                    }
+                }
+                return;
+            }
+
+            if (modoAtual == ModoFerramenta.Editar)
+            {
+                if (elemento.Tag?.ToString() == "Rua" && elemento.DataContext is Via via)
+                {
+                    LimparSelecoes();
+                    ruasSelecionadas.Add(elemento);
+                    AplicarEfeitoSelecao(elemento, true);
+
+                    viaSelecionadaAtual = via;
+
+                    TxtNomeRua.Text = via.tags.ContainsKey("name") ? via.tags["name"] : "Via sem nome";
                 }
             }
+
             else if (modoAtual == ModoFerramenta.Adicionar)
             {
                 if (elemento.Tag?.ToString() == "NoExtremidade")
@@ -115,6 +165,7 @@ namespace SAV
                     }
                 }
             }
+
             else if (modoAtual == ModoFerramenta.Deletar)
             {
                 if (elemento.Tag?.ToString() == "Rua")
@@ -167,18 +218,18 @@ namespace SAV
             {
                 foreach (var rua in ruasSelecionadas)
                 {
-                    // 1. Remove do Canvas (Visual)
                     if (CanvasMapa.Children.Contains(rua))
                     {
                         CanvasMapa.Children.Remove(rua);
                     }
 
-                    // 2. Sincroniza com o Model (Dados)
                     if (rua.DataContext is Via viaParaRemover && dadosMapaAtual?.elements != null)
                     {
                         dadosMapaAtual.elements.Remove(viaParaRemover);
                     }
                 }
+
+                Log.Registrar($"Excluiu permanentemente {quantidade} vias da malha urbana", "Mapa");
 
                 LimparSelecoes();
                 MessageBox.Show($"{quantidade} vias removidas com sucesso!", "Sucesso", MessageBoxButton.OK, MessageBoxImage.Information);
@@ -186,7 +237,7 @@ namespace SAV
         }
 
         private void LimparSelecoes()
-        { 
+        {
             foreach (var elemento in ruasSelecionadas)
             {
                 AplicarEfeitoSelecao(elemento, false);
@@ -197,10 +248,13 @@ namespace SAV
 
             GerenciarBotaoExcluir();
 
-            TxtAvisoSemSelecao?.SetValue(VisibilityProperty, Visibility.Visible);
-            ScrollPropriedadesVia?.SetValue(VisibilityProperty, Visibility.Collapsed);
-            GridBotoesAcoes?.SetValue(VisibilityProperty, Visibility.Collapsed);
-            PainelDadosRua?.SetValue(VisibilityProperty, Visibility.Collapsed);
+            if (modoAtual != ModoFerramenta.Eventos && modoAtual != ModoFerramenta.Editar)
+            {
+                TxtAvisoSemSelecao?.SetValue(VisibilityProperty, Visibility.Visible);
+                ScrollPainelLateral?.SetValue(VisibilityProperty, Visibility.Collapsed);
+                GridBotoesAcoes?.SetValue(VisibilityProperty, Visibility.Collapsed);
+                PainelDadosRua?.SetValue(VisibilityProperty, Visibility.Collapsed);
+            }
         }
 
         private void SelecionarRuaParaEdicao(System.Windows.Shapes.Polyline linhaWpf)
@@ -228,7 +282,7 @@ namespace SAV
                 PreencherCamposInterface(dadosDaVia);
 
                 TxtAvisoSemSelecao?.SetValue(VisibilityProperty, Visibility.Collapsed);
-                ScrollPropriedadesVia?.SetValue(VisibilityProperty, Visibility.Visible);
+                ScrollPainelLateral?.SetValue(VisibilityProperty, Visibility.Visible);
                 GridBotoesAcoes?.SetValue(VisibilityProperty, Visibility.Visible);
                 PainelDadosRua?.SetValue(VisibilityProperty, Visibility.Visible);
             }
@@ -239,7 +293,9 @@ namespace SAV
             if (viaSelecionadaAtual == null) return;
 
             if (viaSelecionadaAtual.tags == null) viaSelecionadaAtual.tags = new Dictionary<string, string>();
-            viaSelecionadaAtual.tags["name"] = TxtNomeRua.Text;
+
+            string novoNome = TxtNomeRua.Text;
+            viaSelecionadaAtual.tags["name"] = novoNome;
 
             if (LstVelocidadeRua.SelectedItem is ListBoxItem itemVelocidade && !string.IsNullOrEmpty(itemVelocidade.Tag?.ToString()))
             {
@@ -255,8 +311,17 @@ namespace SAV
                 viaSelecionadaAtual.tags["oneway"] = itemDirecao.Tag.ToString();
             }
 
-            MessageBox.Show("Alterações salvas com sucesso!", "SAV", MessageBoxButton.OK, MessageBoxImage.Information);
+            var linhaVisual = ruasSelecionadas.FirstOrDefault() as System.Windows.Shapes.Polyline;
+            if (linhaVisual != null)
+            {
+                linhaVisual.ToolTip = string.IsNullOrEmpty(novoNome) ? "Via sem nome" : novoNome;
+            }
+
+            Log.Registrar($"Modificou os dados cadastrais da via ID: {viaSelecionadaAtual.id} para Nome: '{(string.IsNullOrEmpty(novoNome) ? "Sem nome" : novoNome)}'", "Rua");
+
+            MessageBox.Show("Alterações aplicadas na memória do projeto com sucesso! Lembre-se de usar 'Salvar Projeto' para gravar no arquivo.", "SAV", MessageBoxButton.OK, MessageBoxImage.Information);
         }
+
         private void AplicarEfeitoSelecao(FrameworkElement elemento, bool selecionado)
         {
             var shape = elemento as System.Windows.Shapes.Shape;
@@ -388,7 +453,7 @@ namespace SAV
                     Tag = "Rua"
                 };
 
-                novaRua.Points.Add(p1);
+                novaRua.Points.Add(p1); 
                 novaRua.Points.Add(p2);
 
                 if (dadosMapaAtual != null)
@@ -419,9 +484,10 @@ namespace SAV
 
                         if (dadosMapaAtual.elements == null) dadosMapaAtual.elements = new List<Via>();
                         dadosMapaAtual.elements.Add(novaViaModel);
+
+                        Log.Registrar($"Desenhou e conectou uma nova via no mapa (ID Temporário: {novaViaModel.id})", "Mapa");
                     }
                 }
-                // ------------------------------------
 
                 CanvasMapa.Children.Add(novaRua);
 
@@ -508,7 +574,7 @@ namespace SAV
 
                     var linhaWpf = new System.Windows.Shapes.Polyline
                     {
-                        Stroke = CorTemaPrimaria, // Cor Base: Tema Primária
+                        Stroke = CorTemaPrimaria,
                         StrokeThickness = 20,
                         Cursor = System.Windows.Input.Cursors.Hand,
                         StrokeLineJoin = System.Windows.Media.PenLineJoin.Round,
@@ -521,7 +587,7 @@ namespace SAV
 
                     linhaWpf.MouseEnter += (s, e) =>
                     {
-                        if (modoAtual == ModoFerramenta.Adicionar) return;
+                        if (modoAtual == ModoFerramenta.Adicionar || modoAtual == ModoFerramenta.Eventos) return;
 
                         if (s is System.Windows.Shapes.Polyline l)
                         {
@@ -535,6 +601,8 @@ namespace SAV
 
                     linhaWpf.MouseLeave += (s, e) =>
                     {
+                        if (modoAtual == ModoFerramenta.Eventos) return;
+
                         if (s is System.Windows.Shapes.Polyline l)
                         {
                             if (viaSelecionadaAtual != l.DataContext && !ruasSelecionadas.Contains(l))
@@ -798,6 +866,7 @@ namespace SAV
                         {
                             dadosMapaAtual = dados;
                             DesenharNoCanvas(dados);
+                            Log.Registrar($"Carregou um projeto existente do disco: {System.IO.Path.GetFileName(seletor.FileName)}", "Arquivo");
                         }
                     }
                 }
@@ -821,6 +890,7 @@ namespace SAV
                             {
                                 dadosMapaAtual = dados;
                                 DesenharNoCanvas(dados);
+                                Log.Registrar($"Gerou um novo mapa urbano para a região: {areaInteresse}", "Arquivo");
                                 MessageBox.Show("Mapa da cidade gerado e salvo com sucesso!");
                             }
                         }
@@ -836,6 +906,7 @@ namespace SAV
                     if (salvador.ShowDialog() == true)
                     {
                         await ViewModel.SalvarMapaEmDisco(salvador.FileName, dadosMapaAtual);
+                        Log.Registrar($"Salvou as alterações atuais do projeto no arquivo: {System.IO.Path.GetFileName(salvador.FileName)}", "Arquivo");
                         MessageBox.Show("Projeto salvo com sucesso!");
                     }
                 }
@@ -849,6 +920,108 @@ namespace SAV
                 ConfiguracoesWindow Configuracoes = new ConfiguracoesWindow();
                 Configuracoes.Owner = this;
                 Configuracoes.ShowDialog();
+            }
+        }
+
+        private void SimularEventoVirtualAutomatico(Via viaEpicentro, TipoEventoVirtual tipo)
+        {
+            if (dadosMapaAtual?.elements == null || viaEpicentro == null) return;
+
+            string nomeRuaEpicentro = viaEpicentro.tags != null && viaEpicentro.tags.ContainsKey("name") ? viaEpicentro.tags["name"] : "Via sem nome";
+
+            Log.Registrar($"Disparou uma simulação de {tipo.ToString().ToUpper()} com epicentro na rua '{nomeRuaEpicentro}'", "Simulação");
+
+            foreach (var v in dadosMapaAtual.elements) v.StatusSimulacao = "Normal";
+
+            double raioImpacto = 0.0035;
+
+            switch (tipo)
+            {
+                case TipoEventoVirtual.Obra:
+                    viaEpicentro.StatusSimulacao = "Bloqueado";
+                    raioImpacto = 0.004;
+                    break;
+
+                case TipoEventoVirtual.Acidente:
+                    viaEpicentro.StatusSimulacao = "Bloqueado";
+                    raioImpacto = 0.0025;
+                    break;
+
+                case TipoEventoVirtual.EventoPublico:
+                    viaEpicentro.StatusSimulacao = "Caótico";
+                    raioImpacto = 0.006;
+                    break;
+
+                case TipoEventoVirtual.ChuvaIntensa:
+                    viaEpicentro.StatusSimulacao = "Bloqueado";
+                    raioImpacto = 0.005;
+                    break;
+            }
+
+            var pontoCentro = viaEpicentro.geometry?.FirstOrDefault();
+            if (pontoCentro != null)
+            {
+                foreach (var viaVizinha in dadosMapaAtual.elements)
+                {
+                    if (viaVizinha.id == viaEpicentro.id) continue;
+
+                    var pontoVizinho = viaVizinha.geometry?.FirstOrDefault();
+                    if (pontoVizinho != null)
+                    {
+                        double deltaLat = Math.Abs(pontoCentro.lat - pontoVizinho.lat);
+                        double deltaLon = Math.Abs(pontoCentro.lon - pontoVizinho.lon);
+
+                        if (deltaLat < (raioImpacto * 0.4) && deltaLon < (raioImpacto * 0.4))
+                        {
+                            viaVizinha.StatusSimulacao = (tipo == TipoEventoVirtual.ChuvaIntensa) ? "Lento" : "Caótico";
+                        }
+                        else if (deltaLat < raioImpacto && deltaLon < raioImpacto)
+                        {
+                            viaVizinha.StatusSimulacao = "Lento";
+                        }
+                    }
+                }
+            }
+
+            AtualizarCoresDoCanvasPorSimulacao();
+            GerarRelatorioPrevisaoImpacto(tipo);
+        }
+
+        private void GerarRelatorioPrevisaoImpacto(TipoEventoVirtual tipo)
+        {
+            int bloqueadas = 0;
+            int caoticas = 0;
+            int lentas = 0;
+
+            foreach (var v in dadosMapaAtual.elements)
+            {
+                if (v.StatusSimulacao == "Bloqueado") bloqueadas++;
+                else if (v.StatusSimulacao == "Caótico") caoticas++;
+                else if (v.StatusSimulacao == "Lento") lentas++;
+            }
+
+            TxtRelatorioImpacto.Text = $"📊 PREVISÃO DE IMPACTO ({tipo.ToString().ToUpper()}):\n\n" +
+                                       $"🚫 Vias Interditadas: {bloqueadas}\n" +
+                                       $"🚨 Pontos de Congestionamento: {caoticas}\n" +
+                                       $"⏳ Vias com Lentidão: {lentas}\n\n" +
+                                       $"Impacto Total: {(((caoticas + lentas) / (double)dadosMapaAtual.elements.Count) * 100):F1}% da malha afetada.";
+        }
+
+        private void AtualizarCoresDoCanvasPorSimulacao()
+        {
+            var conversorBrush = new BrushConverter();
+
+            foreach (var elemento in CanvasMapa.Children)
+            {
+                if (elemento is System.Windows.Shapes.Polyline linhaVisual && linhaVisual.DataContext is Via viaModel)
+                {
+                    if (conversorBrush.ConvertFrom(viaModel.CorSimulacao) is Brush corCalculada)
+                    {
+                        linhaVisual.Stroke = corCalculada;
+                    }
+
+                    linhaVisual.StrokeThickness = viaModel.StatusSimulacao == "Normal" ? 3 : 6;
+                }
             }
         }
     }

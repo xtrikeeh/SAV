@@ -8,7 +8,10 @@
         mc:Ignorable="d"
         Title="Sistema de Alterações de Vias" 
         WindowStartupLocation="CenterScreen">
-    
+    <Window.InputBindings>
+        <KeyBinding Key="Z" Modifiers="Control" Command="ApplicationCommands.Undo" />
+    </Window.InputBindings>
+
     <Grid Background="{DynamicResource corDestaquePrimaria}">
         <Grid.RowDefinitions>
             <RowDefinition Height="70" />
@@ -80,7 +83,8 @@
                     <RowDefinition Height="70" />
                     <RowDefinition Height="70" />
                     <RowDefinition Height="70" />
-                    <RowDefinition/>
+                    <RowDefinition Height="70" />
+                    <RowDefinition />
                 </Grid.RowDefinitions>
 
                 <!-- Editar -->
@@ -161,6 +165,27 @@
                                               6.70711C4.90237 6.31658 4.90237 5.68342
                                               5.29289 5.29289Z" 
                                               Stretch="Uniform" Cursor="Hand">
+                                        </Path>
+                                    </Viewbox>
+                                </Grid>
+                            </ControlTemplate>
+                        </RadioButton.Template>
+                    </RadioButton>
+                </Grid>
+                
+                <!-- Eventos -->
+                <Grid Grid.Row="3">
+                    <RadioButton x:Name="botaoEventos" 
+                     GroupName="Ferramentas" 
+                     Cursor="Hand"
+                     Checked="Ferramenta_Checked">
+                        <RadioButton.Template>
+                            <ControlTemplate TargetType="RadioButton">
+                                <Grid Style="{DynamicResource fundoGridFerramentas}" Margin="0, 0, -10, 0">
+                                    <Viewbox Width="30" Height="30">
+                                        <Path Style="{DynamicResource efeitoEditar}"
+                                  Data="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z" 
+                                  Stretch="Uniform">
                                         </Path>
                                     </Viewbox>
                                 </Grid>
@@ -299,131 +324,157 @@
                                Margin="20"
                                Visibility="Visible"/>
 
-                    <ScrollViewer x:Name="ScrollPropriedadesVia" Grid.Row="1" VerticalScrollBarVisibility="Auto" Padding="12" Visibility="Collapsed">
-                        <StackPanel x:Name="PainelDadosRua">
+                    <ScrollViewer x:Name="ScrollPainelLateral" Grid.Row="1" VerticalScrollBarVisibility="Auto" Padding="12" Visibility="Collapsed">
+                        <Grid>
+                            <StackPanel x:Name="PainelDadosRua" Visibility="Visible">
 
-                            <StackPanel.Resources>
-                                <Style x:Key="EstiloCardVelocidade" TargetType="ListBoxItem">
-                                    <Setter Property="Background" Value="#FFFFFF" />
-                                    <Setter Property="Foreground" Value="#000000"/>
-                                    <Setter Property="BorderBrush" Value="#EF4444"/>
-                                    <Setter Property="BorderThickness" Value="8"/>
-                                    <Setter Property="Padding" Value="5, 15" />
-                                    <Setter Property="FontSize" Value="18" />
-                                    <Setter Property="FontWeight" Value="bold" />
-                                    <Setter Property="Margin" Value="2"/>
-                                    <Setter Property="HorizontalContentAlignment" Value="Center"/>
-                                    <Setter Property="VerticalContentAlignment" Value="Center"/>
-                                    <Setter Property="Cursor" Value="Hand"/>
-                                    <Setter Property="Template">
-                                        <Setter.Value>
-                                            <ControlTemplate TargetType="ListBoxItem">
-                                                <Border Background="{TemplateBinding Background}" 
-                                        BorderBrush="{TemplateBinding BorderBrush}" 
-                                        BorderThickness="{TemplateBinding BorderThickness}" 
-                                        CornerRadius="50" 
-                                        Padding="{TemplateBinding Padding}">
-                                                    <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                                                </Border>
-                                            </ControlTemplate>
-                                        </Setter.Value>
-                                    </Setter>
-                                    <Style.Triggers>
-                                        <Trigger Property="IsMouseOver" Value="True">
-                                            <Setter Property="Background" Value="#000000" />
-                                            <Setter Property="Foreground" Value="#FFFFFF" />
-                                        </Trigger>
-                                        <Trigger Property="IsSelected" Value="True">
-                                            <Setter Property="Background" Value="#000000" />
-                                            <Setter Property="Foreground" Value="#FFFFFF" />
-                                        </Trigger>
-                                    </Style.Triggers>
-                                </Style>
+                                <StackPanel.Resources>
+                                    <Style x:Key="EstiloCardVelocidade" TargetType="ListBoxItem">
+                                        <Setter Property="Background" Value="#FFFFFF" />
+                                        <Setter Property="Foreground" Value="#000000"/>
+                                        <Setter Property="BorderBrush" Value="#EF4444"/>
+                                        <Setter Property="BorderThickness" Value="8"/>
+                                        <Setter Property="Padding" Value="5, 15" />
+                                        <Setter Property="FontSize" Value="18" />
+                                        <Setter Property="FontWeight" Value="bold" />
+                                        <Setter Property="Margin" Value="2"/>
+                                        <Setter Property="HorizontalContentAlignment" Value="Center"/>
+                                        <Setter Property="VerticalContentAlignment" Value="Center"/>
+                                        <Setter Property="Cursor" Value="Hand"/>
+                                        <Setter Property="Template">
+                                            <Setter.Value>
+                                                <ControlTemplate TargetType="ListBoxItem">
+                                                    <Border Background="{TemplateBinding Background}" 
+                                                            BorderBrush="{TemplateBinding BorderBrush}" 
+                                                            BorderThickness="{TemplateBinding BorderThickness}" 
+                                                            CornerRadius="50" 
+                                                            Padding="{TemplateBinding Padding}">
+                                                        <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                                    </Border>
+                                                </ControlTemplate>
+                                            </Setter.Value>
+                                        </Setter>
+                                        <Style.Triggers>
+                                            <Trigger Property="IsMouseOver" Value="True">
+                                                <Setter Property="Background" Value="#000000" />
+                                                <Setter Property="Foreground" Value="#FFFFFF" />
+                                            </Trigger>
+                                            <Trigger Property="IsSelected" Value="True">
+                                                <Setter Property="Background" Value="#000000" />
+                                                <Setter Property="Foreground" Value="#FFFFFF" />
+                                            </Trigger>
+                                        </Style.Triggers>
+                                    </Style>
 
-                                <Style x:Key="EstiloCardDirecao" TargetType="ListBoxItem">
-                                    <Setter Property="Background" Value="{DynamicResource corDestaquePrimaria}" />
-                                    <Setter Property="Foreground" Value="{DynamicResource corFonte}"/>
-                                    <Setter Property="BorderBrush" Value="{DynamicResource corDestaqueTerciaria}"/>
-                                    <Setter Property="BorderThickness" Value="4"/>
-                                    <Setter Property="Padding" Value="5, 15" />
-                                    <Setter Property="FontSize" Value="18" />
-                                    <Setter Property="FontWeight" Value="bold" />
-                                    <Setter Property="Margin" Value="2"/>
-                                    <Setter Property="HorizontalContentAlignment" Value="Center"/>
-                                    <Setter Property="VerticalContentAlignment" Value="Center"/>
-                                    <Setter Property="Cursor" Value="Hand"/>
-                                    <Setter Property="Template">
-                                        <Setter.Value>
-                                            <ControlTemplate TargetType="ListBoxItem">
-                                                <Border Background="{TemplateBinding Background}" 
-                                                        BorderBrush="{TemplateBinding BorderBrush}" 
-                                                        BorderThickness="{TemplateBinding BorderThickness}" 
-                                                        CornerRadius="12" 
-                                                        Padding="2, 30">
-                                                    <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                                                </Border>
-                                            </ControlTemplate>
-                                        </Setter.Value>
-                                    </Setter>
-                                    <Style.Triggers>
-                                        <Trigger Property="IsMouseOver" Value="True">
-                                            <Setter Property="BorderBrush" Value="{DynamicResource amareloSemantico}" />
-                                        </Trigger>
-                                        <Trigger Property="IsSelected" Value="True">
-                                            <Setter Property="BorderBrush" Value="{DynamicResource amareloSemantico}" />
-                                            <Setter Property="Background" Value="#000000" />
-                                            <Setter Property="Foreground" Value="#FFFFFF" />
-                                        </Trigger>
-                                    </Style.Triggers>
-                                </Style>
-                            </StackPanel.Resources>
+                                    <Style x:Key="EstiloCardDirecao" TargetType="ListBoxItem">
+                                        <Setter Property="Background" Value="{DynamicResource corDestaquePrimaria}" />
+                                        <Setter Property="Foreground" Value="{DynamicResource corFonte}"/>
+                                        <Setter Property="BorderBrush" Value="{DynamicResource corDestaqueTerciaria}"/>
+                                        <Setter Property="BorderThickness" Value="4"/>
+                                        <Setter Property="Padding" Value="5, 15" />
+                                        <Setter Property="FontSize" Value="18" />
+                                        <Setter Property="FontWeight" Value="bold" />
+                                        <Setter Property="Margin" Value="2"/>
+                                        <Setter Property="HorizontalContentAlignment" Value="Center"/>
+                                        <Setter Property="VerticalContentAlignment" Value="Center"/>
+                                        <Setter Property="Cursor" Value="Hand"/>
+                                        <Setter Property="Template">
+                                            <Setter.Value>
+                                                <ControlTemplate TargetType="ListBoxItem">
+                                                    <Border Background="{TemplateBinding Background}" 
+                                                            BorderBrush="{TemplateBinding BorderBrush}" 
+                                                            BorderThickness="{TemplateBinding BorderThickness}" 
+                                                            CornerRadius="12" 
+                                                            Padding="2, 30">
+                                                        <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                                    </Border>
+                                                </ControlTemplate>
+                                            </Setter.Value>
+                                        </Setter>
+                                        <Style.Triggers>
+                                            <Trigger Property="IsMouseOver" Value="True">
+                                                <Setter Property="BorderBrush" Value="{DynamicResource amareloSemantico}" />
+                                            </Trigger>
+                                            <Trigger Property="IsSelected" Value="True">
+                                                <Setter Property="BorderBrush" Value="{DynamicResource amareloSemantico}" />
+                                                <Setter Property="Background" Value="#000000" />
+                                                <Setter Property="Foreground" Value="#FFFFFF" />
+                                            </Trigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </StackPanel.Resources>
 
-                            <TextBlock Text="Nome da Via:" Foreground="{DynamicResource corFonte}" FontSize="11" Margin="0,0,0,3"/>
-                            <TextBox x:Name="TxtNomeRua" 
-                                     Background="#22FFFFFF" 
-                                     Foreground="{DynamicResource corFonte}" 
-                                     BorderBrush="{DynamicResource corTemaSecundaria}" 
-                                     Padding="5" 
-                                     Margin="0,0,0,15" 
-                                     FontSize="13" 
-                                     FontWeight="Bold"/>
+                                <TextBlock Text="Nome da Via:" Foreground="{DynamicResource corFonte}" FontSize="11" Margin="0,0,0,3"/>
+                                <TextBox x:Name="TxtNomeRua" 
+                                         Background="#22FFFFFF" 
+                                         Foreground="{DynamicResource corFonte}" 
+                                         BorderBrush="{DynamicResource corTemaSecundaria}" 
+                                         Padding="5" 
+                                         Margin="0,0,0,15" 
+                                         FontSize="13" 
+                                         FontWeight="Bold"/>
 
-                            <TextBlock Text="Velocidade Máxima (km/h):" Foreground="{DynamicResource corFonte}" FontSize="11" Margin="0,0,0,5"/>
-                            <ListBox x:Name="LstVelocidadeRua" 
-                                     Background="Transparent" 
-                                     BorderThickness="0" 
-                                     Margin="0,0,0,15"
-                                     ScrollViewer.HorizontalScrollBarVisibility="Disabled">
-                                <ListBox.ItemsPanel>
-                                    <ItemsPanelTemplate>
-                                        <UniformGrid Columns="3"/>
-                                    </ItemsPanelTemplate>
-                                </ListBox.ItemsPanel>
-                                <ListBoxItem Content="Sem info" Tag="" Style="{StaticResource EstiloCardVelocidade}" FontSize="9"/>
-                                <ListBoxItem Content="30" Tag="30" Style="{StaticResource EstiloCardVelocidade}"/>
-                                <ListBoxItem Content="40" Tag="40" Style="{StaticResource EstiloCardVelocidade}"/>
-                                <ListBoxItem Content="50" Tag="50" Style="{StaticResource EstiloCardVelocidade}"/>
-                                <ListBoxItem Content="60" Tag="60" Style="{StaticResource EstiloCardVelocidade}"/>
-                                <ListBoxItem Content="80" Tag="80" Style="{StaticResource EstiloCardVelocidade}"/>
-                                <ListBoxItem Content="90" Tag="90" Style="{StaticResource EstiloCardVelocidade}"/>
-                                <ListBoxItem Content="110" Tag="110" Style="{StaticResource EstiloCardVelocidade}"/>
-                                <ListBoxItem Content="120" Tag="120" Style="{StaticResource EstiloCardVelocidade}"/>
-                            </ListBox>
+                                <TextBlock Text="Velocidade Máxima (km/h):" Foreground="{DynamicResource corFonte}" FontSize="11" Margin="0,0,0,5"/>
+                                <ListBox x:Name="LstVelocidadeRua" 
+                                         Background="Transparent" 
+                                         BorderThickness="0" 
+                                         Margin="0,0,0,15"
+                                         ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+                                    <ListBox.ItemsPanel>
+                                        <ItemsPanelTemplate>
+                                            <UniformGrid Columns="3"/>
+                                        </ItemsPanelTemplate>
+                                    </ListBox.ItemsPanel>
+                                    <ListBoxItem Content="Sem info" Tag="" Style="{StaticResource EstiloCardVelocidade}" FontSize="9"/>
+                                    <ListBoxItem Content="30" Tag="30" Style="{StaticResource EstiloCardVelocidade}"/>
+                                    <ListBoxItem Content="40" Tag="40" Style="{StaticResource EstiloCardVelocidade}"/>
+                                    <ListBoxItem Content="50" Tag="50" Style="{StaticResource EstiloCardVelocidade}"/>
+                                    <ListBoxItem Content="60" Tag="60" Style="{StaticResource EstiloCardVelocidade}"/>
+                                    <ListBoxItem Content="80" Tag="80" Style="{StaticResource EstiloCardVelocidade}"/>
+                                    <ListBoxItem Content="90" Tag="90" Style="{StaticResource EstiloCardVelocidade}"/>
+                                    <ListBoxItem Content="110" Tag="110" Style="{StaticResource EstiloCardVelocidade}"/>
+                                    <ListBoxItem Content="120" Tag="120" Style="{StaticResource EstiloCardVelocidade}"/>
+                                </ListBox>
 
-                            <TextBlock Text="Direção do Fluxo:" Foreground="{DynamicResource corFonte}" FontSize="11" Margin="0,0,0,5"/>
-                            <ListBox x:Name="LstDirecaoRua" 
-                                     Background="Transparent" 
-                                     BorderThickness="0" 
-                                     Margin="0,0,0,15">
-                                <ListBox.ItemsPanel>
-                                    <ItemsPanelTemplate>
-                                        <UniformGrid Columns="2"/>
-                                    </ItemsPanelTemplate>
-                                </ListBox.ItemsPanel>
-                                <ListBoxItem Content="Dupla" Tag="no" Style="{StaticResource EstiloCardDirecao}"/>
-                                <ListBoxItem Content="Única" Tag="yes" Style="{StaticResource EstiloCardDirecao}"/>
-                            </ListBox>
-                        </StackPanel>
+                                <TextBlock Text="Direção do Fluxo:" Foreground="{DynamicResource corFonte}" FontSize="11" Margin="0,0,0,5"/>
+                                <ListBox x:Name="LstDirecaoRua" 
+                                         Background="Transparent" 
+                                         BorderThickness="0" 
+                                         Margin="0,0,0,15">
+                                    <ListBox.ItemsPanel>
+                                        <ItemsPanelTemplate>
+                                            <UniformGrid Columns="2"/>
+                                        </ItemsPanelTemplate>
+                                    </ListBox.ItemsPanel>
+                                    <ListBoxItem Content="Dupla" Tag="no" Style="{StaticResource EstiloCardDirecao}"/>
+                                    <ListBoxItem Content="Única" Tag="yes" Style="{StaticResource EstiloCardDirecao}"/>
+                                </ListBox>
+                            </StackPanel>
+
+                            <StackPanel x:Name="PainelEventos" Visibility="Collapsed">
+                                <TextBlock Text="Simulador de Cenários" FontWeight="Bold" Foreground="{DynamicResource corFonte}" FontSize="14" Margin="0,5,0,15"/>
+
+                                <TextBlock Text="Selecione o Tipo de Evento Virtual:" Foreground="{DynamicResource corFonte}" FontSize="11" Margin="0,0,0,5"/>
+                                <ComboBox x:Name="CboTipoEvento" Height="32" Margin="0,0,0,20" VerticalContentAlignment="Center">
+                                    <ComboBoxItem Content="Obras na Via (Bloqueio Total)" IsSelected="True"/>
+                                    <ComboBoxItem Content="Acidente de Trânsito"/>
+                                    <ComboBoxItem Content="Grande Evento (Concerto/Futebol)"/>
+                                    <ComboBoxItem Content="Inundação / Chuva Forte"/>
+                                </ComboBox>
+
+                                <Border Background="#15FFFFFF" CornerRadius="8" Padding="12">
+                                    <StackPanel>
+                                        <TextBlock Text="Previsão de Impactos Urbanos" FontWeight="Bold" Foreground="{DynamicResource corFonte}" FontSize="12" Margin="0,0,0,8"/>
+                                        <TextBlock x:Name="TxtRelatorioImpacto" 
+                               Text="Clique em qualquer rua do mapa para iniciar a simulação e gerar a previsão de impactos no entorno em tempo real." 
+                               TextWrapping="Wrap" 
+                               FontSize="12" 
+                               LineHeight="18"
+                               Foreground="{DynamicResource corFonte}"/>
+                                    </StackPanel>
+                                </Border>
+                            </StackPanel>
+                        </Grid>
                     </ScrollViewer>
 
                     <Grid x:Name="GridBotoesAcoes" Grid.Row="2" Margin="0, 0, 4, 4" Visibility="Collapsed">
@@ -432,28 +483,11 @@
                             <ColumnDefinition Width="4" />
                             <ColumnDefinition />
                         </Grid.ColumnDefinitions>
-
                         <Grid Grid.Column="0">
-                            <Button Content="Desfazer"
-                                    Click="BtnDesfazer_Click"
-                                    Background="{DynamicResource vermelhoSemantico}" 
-                                    Foreground="{DynamicResource corDestaquePrimaria}" 
-                                    FontWeight="Bold" 
-                                    BorderThickness="0"
-                                    Padding="4" 
-                                    Cursor="Hand"/>
+                            <Button Content="Desfazer" Click="BtnDesfazer_Click" Background="{DynamicResource vermelhoSemantico}" Foreground="{DynamicResource corDestaquePrimaria}" FontWeight="Bold" BorderThickness="0" Padding="4" Cursor="Hand"/>
                         </Grid>
-
                         <Grid Grid.Column="2">
-                            <Button x:Name="BtnSalvarDadosRua" 
-                                    Content="Salvar Alterações"
-                                    Click="BtnSalvarDadosRua_Click"
-                                    Background="{DynamicResource corTemaPrimaria}" 
-                                    Foreground="{DynamicResource corDestaquePrimaria}" 
-                                    FontWeight="Bold"
-                                    BorderThickness="0"
-                                    Padding="8" 
-                                    Cursor="Hand"/>
+                            <Button x:Name="BtnSalvarDadosRua" Content="Salvar Alterações" Click="BtnSalvarDadosRua_Click" Background="{DynamicResource corTemaPrimaria}" Foreground="{DynamicResource corDestaquePrimaria}" FontWeight="Bold" BorderThickness="0" Padding="8" Cursor="Hand"/>
                         </Grid>
                     </Grid>
                 </Grid>
